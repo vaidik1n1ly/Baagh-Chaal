@@ -17,7 +17,7 @@ h1 { text-align: center; margin: 2px 0 12px; font-size: clamp(22px, 5.5vw, 34px)
           grid-template-areas: "stage" "game" "about"; }
 .stage { grid-area: stage; justify-self: center; width: min(100%, var(--board-max), max(280px, calc(100vh - var(--chrome))));
          width: min(100%, var(--board-max), max(280px, calc(100dvh - var(--chrome)))); }
-#gamePanel { grid-area: game;}
+#gamePanel { grid-area: game; }
 #about     { grid-area: about; }
 
 @media (max-width: 759px) {
@@ -57,10 +57,26 @@ label { display: flex; flex-direction: column; font-size: 11px; font-weight: 700
 select { margin-top: 4px; font: inherit; font-size: 15px; text-transform: none; letter-spacing: 0; color: var(--text-color);
          padding: 9px 8px; min-height: 44px; border: 2px solid var(--panel-border); border-radius: 10px; background: #fff9ea; }
 
+/* ---- online play box ---- */
+.online { margin: 12px 0 0; padding: 12px; background: rgba(255, 255, 255, .4); border-radius: 12px; }
+.online #createRoom { width: 100%; }
+.join-row { display: flex; gap: 8px; margin-top: 8px; }
+.online input { flex: 1; min-width: 0; font: inherit; font-size: 16px; text-transform: uppercase; letter-spacing: .15em; text-align: center;
+                padding: 9px 8px; min-height: 44px; border: 2px solid var(--panel-border); border-radius: 10px; background: #fff9ea; color: var(--text-color); }
+.join-row button { flex: 0 0 auto; }
+.room { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
+.room b { display: block; font-size: 26px; letter-spacing: .2em; line-height: 1.2; }
+.note { margin: 8px 0 0; font-size: 13px; color: var(--muted-color); word-break: break-word; }
+.note:empty { display: none; }
+
 .stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin: 14px 0; }
 .stat { background: rgba(255, 255, 255, .5); border-radius: 12px; padding: 8px 4px; text-align: center; }
 .stat b { display: block; font-size: 22px; line-height: 1.2; }
 .stat small { font-size: 11px; text-transform: uppercase; letter-spacing: .05em; color: var(--muted-color); }
+
+label.check { flex-direction: row; align-items: center; gap: 8px; margin: 0 0 14px; font-size: 14px; font-weight: 600;
+              text-transform: none; letter-spacing: 0; color: var(--text-color); cursor: pointer; }
+label.check input { width: 20px; height: 20px; margin: 0; accent-color: var(--button-bg); cursor: pointer; }
 
 .btn-row { display: flex; gap: 10px; }
 button { flex: 1; min-height: 44px; padding: 10px 14px; font: inherit; font-weight: 700; border: 2px solid transparent; border-radius: 10px;
@@ -108,6 +124,7 @@ button:disabled { opacity: .4; cursor: default; }
 .piece.goat  { background-color: var(--goat-bg);  border-color: var(--goat-ring);  background-image: var(--goat-image); }
 .piece.tiger::after { content: var(--tiger-piece-icon, var(--tiger-icon)); }   /* board pieces: own icon, else the text icon */
 .piece.goat::after  { content: var(--goat-piece-icon,  var(--goat-icon)); }
+.piece.tiger.trapped { filter: grayscale(.75) brightness(.8); }          /* a tiger with no moves */
 .piece.selected { transform: translate(-50%, -50%) scale(1.1); box-shadow: 0 0 0 .9cqw var(--selected-ring), 0 1cqw 2cqw rgba(0, 0, 0, .4); }
 
 /* ================= GAME-OVER POPUP ================= */
@@ -145,8 +162,7 @@ button:disabled { opacity: .4; cursor: default; }
 #overlay     { animation: fade var(--anim-popup) ease-out; }
 .popup       { animation: pop var(--anim-popup) cubic-bezier(.2, 1.4, .4, 1); }
 
-/* People who ask their device for less motion get none. */
-@media (prefers-reduced-motion: reduce) {
-  *, *::before, *::after { animation: none !important; transition: none !important; }
-  .piece.dying { display: none; }
-}
+/* Animations switched off: the "Animations" checkbox sets data-animations="off" on <html>.
+   (On a first visit it follows the device's "reduce motion" setting.) */
+[data-animations="off"] *, [data-animations="off"] *::before, [data-animations="off"] *::after { animation: none !important; transition: none !important; }
+[data-animations="off"] .piece.dying { display: none; }

@@ -24,24 +24,43 @@
   </main>
 
   <section class="panel" id="gamePanel">
-    <h2 id="gamePanelTitle">Game</h2>
+    <h2>Game</h2>
     <div class="settings">
       <label>Mode
-        <select id="mode"><option value="2p">2 players</option><option value="cpu" selected>vs Computer</option></select>
+        <select id="mode"><option value="2p">2 players</option><option value="cpu" selected>vs Computer</option><option value="online">Online (friend)</option></select>
       </label>
-      <label class="cpu-only">You play
+      <label class="cpu-only" id="sideRow">You play
         <select id="mySide"><option value="goat" data-icon="goat">Goats</option><option value="tiger" data-icon="tiger">Tigers</option></select>
       </label>
-      <label class="cpu-only">Level
+      <label class="cpu-only" id="levelRow">Level
         <select id="level"><option value="1">Easy</option><option value="2" selected>Medium</option><option value="4">Hard</option></select>
       </label>
+    </div>
+
+    <!-- Online play: only shown when Mode = "Online (friend)" -->
+    <div class="online" id="onlineBox" hidden>
+      <div id="lobby">
+        <button id="createRoom">Create game</button>
+        <div class="join-row">
+          <input id="joinCode" placeholder="Friend's code" maxlength="5" autocapitalize="characters" autocomplete="off" spellcheck="false" aria-label="Friend's game code">
+          <button id="joinRoom" class="secondary">Join</button>
+        </div>
+      </div>
+      <div id="roomInfo" class="room" hidden>
+        <span>Game code <b id="roomCode"></b></span>
+        <button id="copyLink" class="secondary">Copy invite link</button>
+      </div>
+      <p id="onlineNote" class="note"></p>
     </div>
 
     <div class="stats">
       <div class="stat"><b id="inHand"></b><small>In hand</small></div>
       <div class="stat"><b id="onBoard"></b><small>On board</small></div>
       <div class="stat"><b><span id="captured"></span>/<span data-rule="capturesToWin"></span></b><small>Captured</small></div>
+      <div class="stat" style="display: none;"><b id="trapped"></b><small data-icon="tiger">Trapped</small></div>
     </div>
+
+    <label class="check" style="display: none;"><input type="checkbox" id="animToggle"> Animations</label>
 
     <div class="btn-row">
       <button id="new">New game</button>
@@ -86,6 +105,8 @@
 
 <script src="js/rules.js"></script>  <!-- the game rules (no screen code) -->
 <script src="js/ai.js"></script>     <!-- the computer player -->
+<script src="js/vendor/peerjs.min.js"></script>  <!-- PeerJS: the connection library (used by net.js only) -->
+<script src="js/net.js"></script>    <!-- online play: the link between two players -->
 <script src="js/ui.js"></script>     <!-- screen + clicks (no rules) -->
 </body>
 </html>
