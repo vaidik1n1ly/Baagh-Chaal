@@ -21,15 +21,24 @@
   --goat-image:  url("../img/goat.png");
 
   /* ---------- PAGE & PANELS ---------- */
-  --page-bg:       #FF7518;
+  --page-bg:       #0ac486;
+  /* --page-bg:       #FF7518; */
   /* --page-bg:       #c98a35; */
   --page-bg-light: #e3b565;      /* soft glow at the top of the page */
   --panel-bg:      #f6e8c8;
-  --panel-border:  #7a3b17;
+  /* --panel-border:  #7a3b17; */
+  --panel-border: #673147;
   --text-color:    #2b1608;
   --muted-color:   #7a5a3a;      /* small labels */
 
+
+  /* blue, bright red and butter yellow */
+  /* oat, blue, hotpink */
+  /* oar, plum purple, tangerine */
+  /* muted red, oat, pumpkin */
+
   /* ---------- BOARD ---------- */
+  /* --board-bg:      #C41E3A; */
   --board-bg:      #e8c88f;
   --board-bg-light:#f2dba9;
   --board-frame:   #5b2a10;      /* the thick wooden frame */
@@ -57,7 +66,7 @@
   --draw-color:    #4a6f9c;      /* draw */
 
   /* ---------- BUTTONS ---------- */
-  --button-bg:       #d9620b;
+  --button-bg:       #FF7518;
   --button-hover-bg: #f07818;
   --button-text:     #ffffff;
 
