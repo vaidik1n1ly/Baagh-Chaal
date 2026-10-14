@@ -24,7 +24,7 @@
   </main>
 
   <section class="panel" id="gamePanel">
-    <h2>Game</h2>
+    <h2 id="gamePanelTitle">Game</h2>
     <div class="settings">
       <label>Mode
         <select id="mode"><option value="2p">2 players</option><option value="cpu" selected>vs Computer</option><option value="online">Online (friend)</option></select>
@@ -54,10 +54,10 @@
     </div>
 
     <div class="stats">
-      <div class="stat"><b id="inHand"></b><small>In hand</small></div>
-      <div class="stat"><b id="onBoard"></b><small>On board</small></div>
-      <div class="stat"><b><span id="captured"></span>/<span data-rule="capturesToWin"></span></b><small>Captured</small></div>
-      <div class="stat" style="display: none;"><b id="trapped"></b><small data-icon="tiger">Trapped</small></div>
+      <div class="stat"><b id="trapped"></b><small>Tigers Trapped</small></div>
+      <div class="stat"><b id="inHand"></b><small>Goats In hand</small></div>
+      <div class="stat"><b id="onBoard"></b><small>Goats On board</small></div>
+      <div class="stat"><b><span id="captured"></span>/<span data-rule="capturesToWin"></span></b><small>Goats Captured</small></div>
     </div>
 
     <label class="check" style="display: none;"><input type="checkbox" id="animToggle"> Animations</label>
