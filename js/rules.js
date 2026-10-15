@@ -50,6 +50,20 @@ const Rules = (() => {
     return list.sort((a, b) => (b.over !== null) - (a.over !== null));   // captures first
   }
 
+  // Tigers that have no legal move right now (no empty neighbour and no capture).
+  function trappedTigers(g) {
+    const list = [];
+    g.board.forEach((v, p) => { if (v === "tiger" && movesFrom(g, p).length === 0) list.push(p); });
+    return list;
+  }
+
+  // For moves that arrive over the network: find OUR legal move for {from, to}. We fill in the rest
+  // (e.g. which goat gets captured) from our own rules, so the other side can't cheat. null = not legal.
+  function findMove(g, m) {
+    if (!m || !Number.isInteger(m.to) || (m.from !== null && !Number.isInteger(m.from))) return null;
+    return allMoves(g, g.turn).find(l => l.from === m.from && l.to === m.to) || null;
+  }
+
   // Low-level: change the board, and take it back. (The computer uses these to "imagine" moves.)
   function apply(g, side, m) {
     if (m.from === null) { g.board[m.to] = "goat"; g.goatsInHand--; return; }
@@ -81,7 +95,7 @@ const Rules = (() => {
     }
   }
 
-  return { config, adj, jumps, newGame, movesFrom, allMoves, apply, undo, keyFor, play };
+  return { config, adj, jumps, newGame, movesFrom, allMoves, findMove, trappedTigers, apply, undo, keyFor, play };
 })();
 
 if (typeof module !== "undefined") module.exports = Rules;   // lets Node load it for testing

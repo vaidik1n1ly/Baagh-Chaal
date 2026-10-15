@@ -18,6 +18,26 @@ const WORDS = {
   turn2p: (ic, side, action) => `${ic} ${side}: ${action}`,
   win: who => `${who} win!`,
 
+  // Online
+  opponentTurn: ic => `Opponent's turn (${ic})`,
+  online: {
+    lobby:    "Create a game, or enter a friend's code to join.",
+    setup:    "Setting up your game…",
+    waiting:  code => `Waiting for your friend… share code ${code}`,
+    joining:  "Connecting…",
+    left:     "Your friend disconnected. They can rejoin with the same code.",
+    leftGuest:"Disconnected from the host. Press Join to reconnect.",
+    badCode:  "Codes are 5 letters/numbers.",
+    notFound: "No game found with that code. Check it and try again.",
+    noService:"Couldn't reach the connection service. Check your internet and try again.",
+    noPath:   "Couldn't connect to your friend. Some networks (strict firewalls, some mobile data) block direct connections.",
+    problem:  "Connection problem",
+    askedNew: "Asked the host for a new game…",
+    askNew:   "Your friend wants a new game. Start one?",
+    declined: "The host said no to a new game.",
+    copied:   "Invite link copied!"
+  },
+
   draw: "Draw: same position repeated",
   over: {
     draw:    "The same position happened too many times.",
@@ -31,17 +51,31 @@ const WORDS = {
 const $ = id => document.getElementById(id);
 const cssVar = name => getComputedStyle(document.documentElement).getPropertyValue(name).trim().replace(/^["']|["']$/g, "");
 const icon = side => cssVar(`--${side}-icon`) || side;       // icons come from theme.css
-const popupDelay = () => (window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches) ? 0
-                       : parseFloat(cssVar("--anim-popup-delay")) || 0;   // timing comes from theme.css (in ms)
+const popupDelay = () => animationsOn() ? parseFloat(cssVar("--anim-popup-delay")) || 0 : 0;   // timing comes from theme.css (in ms)
+
+// ---- animations on/off: remembered in this browser; the first visit follows the device's "reduce motion" setting ----
+const ANIM_KEY = "baagh-chaal-animations";
+function animationsOn() { return document.documentElement.dataset.animations !== "off"; }
+function setAnimations(on, save) {
+  document.documentElement.dataset.animations = on ? "on" : "off";   // style.css switches everything off from this
+  $("animToggle").checked = on;
+  if (save) try { localStorage.setItem(ANIM_KEY, on ? "on" : "off"); } catch (e) { /* storage blocked: just don't remember */ }
+}
+function bump(el) { el.classList.remove("bump"); void el.offsetWidth; el.classList.add("bump"); }   // restart the little "pop"
 
 // ---- what the screen remembers (the game itself lives in `game`) ----
 let game, selected = null, history = [], thinking = false, popupClosed = false;
+let prevTrapped = 0;      // for the "trapped" counter bump
 let animate = null;      // the move to animate on the NEXT render (set right after a move, then cleared)
 let popupTimer = null;
+let online = { role: null, connected: false, mySide: null, code: null, msg: "", note: "" };   // see "online play" below
 
 const vsComputer     = () => $("mode").value === "cpu";
 const computerSide   = () => $("mySide").value === "goat" ? "tiger" : "goat";
 const isComputerTurn = () => !game.winner && vsComputer() && game.turn === computerSide();
+const isOnline   = () => $("mode").value === "online";
+const isPersonal = () => vsComputer() || isOnline();                          // "you" against someone (computer or friend)
+const mySide     = () => isOnline() ? online.mySide : $("mySide").value;       // which side the person at this screen plays
 
 function newGame() {
   game = Rules.newGame();
@@ -60,18 +94,25 @@ function playMove(m) {
 
 function onPointClick(p) {
   if (game.winner || isComputerTurn()) return;
+  if (isOnline() && !(online.connected && online.mySide && game.turn === online.mySide)) return;   // online: only on your turn, while connected
   const piece = game.board[p];
 
   if (game.turn === "goat" && game.goatsInHand > 0) {           // placement phase
-    if (piece === null) playMove({ from: null, to: p, over: null });
+    if (piece === null) humanMove({ from: null, to: p, over: null });
   } else if (piece === game.turn) {                             // pick (or un-pick) one of your pieces
     selected = selected === p ? null : p;
   } else if (selected !== null) {                               // move it
     const m = Rules.movesFrom(game, selected).find(mv => mv.to === p);
-    if (m) playMove(m);
+    if (m) humanMove(m);
   }
   render();
   maybeComputerMove();
+}
+
+// A move made by the person at this screen: play it, and tell the friend if we're online.
+function humanMove(m) {
+  playMove(m);
+  if (isOnline()) Net.send({ t: "move", from: m.from, to: m.to });
 }
 
 function maybeComputerMove() {
@@ -82,12 +123,12 @@ function maybeComputerMove() {
     if (isComputerTurn()) playMove(AI.chooseMove(game, game.turn, Number($("level").value)));
     render();
     maybeComputerMove();
-  }, 600);                                                      // a bit longer than the move animations
+  }, animationsOn() ? 600 : 450);                               // a bit longer when the moves are animated
 }
 
 // Undo goes back to a snapshot where it's YOUR turn (so against the computer it undoes both moves).
 function findUndoIndex() {
-  if (thinking || isComputerTurn()) return -1;
+  if (thinking || isComputerTurn() || isOnline()) return -1;      // (no Undo online: it would need your friend's OK)
   let i = history.length - 1;
   if (vsComputer()) while (i >= 0 && JSON.parse(history[i]).turn === computerSide()) i--;
   return i;
@@ -105,15 +146,17 @@ function undo() {
 function resultForMe() {
   if (!game.winner) return null;
   if (game.winner === "Draw") return "draw";
-  if (!vsComputer()) return "win";                          // 2 players: someone always wins
-  return (game.winner === "Tigers" ? "tiger" : "goat") === $("mySide").value ? "win" : "lose";
+  if (!isPersonal()) return "win";                          // 2 players: someone always wins
+  return (game.winner === "Tigers" ? "tiger" : "goat") === mySide() ? "win" : "lose";
 }
 
 function statusText(result) {
-  const vs = vsComputer(), me = $("mySide").value;
+  const vs = isPersonal(), me = mySide();
   if (result === "draw") return WORDS.draw;
   if (result) return !vs ? WORDS.win(game.winner) : (result === "win" ? WORDS.youWin : WORDS.youLose)(icon(me));
+  if (isOnline() && (!online.connected || !online.mySide)) return online.msg || WORDS.online.joining;   // not connected yet / friend left
   if (isComputerTurn()) return WORDS.thinking(icon(game.turn));
+  if (isOnline() && game.turn !== me) return WORDS.opponentTurn(icon(game.turn));
   const action = game.turn === "tiger" ? WORDS.moveTiger : game.goatsInHand > 0 ? WORDS.placeGoat : WORDS.moveGoat;
   return vs ? WORDS.yourTurn(icon(game.turn), action)
             : WORDS.turn2p(icon(game.turn), game.turn === "tiger" ? "Tigers" : "Goats", action);
@@ -126,10 +169,11 @@ function setResult(el, result) { if (result) el.dataset.result = result; else de
 const place = p => `left:${(p % 5) * 25}%;top:${Math.floor(p / 5) * 25}%`;
 
 function render() {
-  const anim = animate; animate = null;           // the move to animate (only right after a move; undo/select never animate)
+  const anim = animationsOn() ? animate : null; animate = null;   // the move to animate (only right after a move, and only if animations are on)
   let lines = "", points = "", pieces = "";
   const moves = selected === null ? [] : Rules.movesFrom(game, selected);
   const last = game.lastMove;
+  const trapped = Rules.trappedTigers(game);
 
   for (let p = 0; p < 25; p++) {
     for (const q of Rules.adj[p])
@@ -143,7 +187,7 @@ function render() {
     points += `<div class="${cls}" style="${place(p)}" data-p="${p}"></div>`;
 
     if (game.board[p]) {
-      let cls = `piece ${game.board[p]}${selected === p ? " selected" : ""}`, vars = "";
+      let cls = `piece ${game.board[p]}${selected === p ? " selected" : ""}${trapped.includes(p) ? " trapped" : ""}`, vars = "";
       if (anim && anim.to === p) {                                           // the piece that just moved
         cls += anim.from === null ? " drop" : anim.over !== null ? " hop" : " slide";
         if (anim.from !== null) vars = `;--fx:${(anim.from % 5) * 25}%;--fy:${Math.floor(anim.from / 5) * 25}%`;   // where it came from
@@ -162,14 +206,16 @@ function render() {
   $("phaseLine").textContent = game.winner ? "Game over" : game.goatsInHand > 0 ? "Placement phase" : "Movement phase";
   if (game.winner) delete $("turn").dataset.side; else $("turn").dataset.side = game.turn;   // while playing: tinted by side
   setResult($("turn"), result);                                                              // at the end: green / red / blue
-  document.querySelectorAll(".cpu-only").forEach(el => el.hidden = !vsComputer());   // hide computer options in 2-player mode
+  $("sideRow").hidden  = !isPersonal() || (isOnline() && online.role === "guest");   // "You play": vs computer, or the host online
+  $("levelRow").hidden = !vsComputer();                                                // "Level": vs computer only
+  renderOnline();
   $("inHand").textContent   = game.goatsInHand;
   $("onBoard").textContent  = game.board.filter(v => v === "goat").length;
   $("captured").textContent = game.captured;
-  if (anim && anim.over !== null) {                            // bump the counter when a goat is captured
-    const tile = $("captured").closest(".stat");
-    tile.classList.remove("bump"); void tile.offsetWidth; tile.classList.add("bump");
-  }
+  if (anim && anim.over !== null) bump($("captured").closest(".stat"));   // a goat was captured
+  $("trapped").textContent = `${trapped.length}/${game.board.filter(v => v === "tiger").length}`;
+  if (anim && trapped.length > prevTrapped) bump($("trapped").closest(".stat"));   // another tiger got stuck
+  prevTrapped = trapped.length;
   $("undo").disabled        = findUndoIndex() < 0;
 
   // game-over popup: after a move, wait a moment so you can watch the last move first
@@ -183,11 +229,110 @@ function updatePopup(result) {
   $("overlay").style.display = showPopup ? "flex" : "none";
   setResult($("popup"), showPopup ? result : null);
   if (showPopup) {
-    $("overTitle").textContent = result === "draw" ? "Draw" : vsComputer() ? statusText(result) : `${icon(game.winner === "Tigers" ? "tiger" : "goat")} ${WORDS.win(game.winner)}`;
+    $("overTitle").textContent = result === "draw" ? "Draw" : isPersonal() ? statusText(result) : `${icon(game.winner === "Tigers" ? "tiger" : "goat")} ${WORDS.win(game.winner)}`;
     $("overMsg").textContent = game.winner === "Draw" ? WORDS.over.draw
       : game.winner === "Goats" ? WORDS.over.trapped
       : game.captured >= Rules.config.capturesToWin ? WORDS.over.captured : WORDS.over.stuck;
   }
+}
+
+// ============================================================
+// ONLINE PLAY. The connection itself is in net.js; this is what the screen does with it.
+// The host (who creates the game) sends the whole game when a friend connects; after that only moves travel
+// ({from, to}). Both sides check every move with their own copy of the rules.
+// ============================================================
+const freshOnline = () => ({ role: null, connected: false, mySide: null, code: null, msg: WORDS.online.lobby, note: "" });
+
+function onModeChange() {
+  Net.close(); online = freshOnline();
+  newGame();                                  // a fresh local board (online, it stays locked until a friend connects)
+}
+function onSideChange() { if (!isOnline()) newGame(); }   // online, the host's choice is used at the next new game
+
+function onNewGameClick() {
+  if (isOnline() && online.connected) {
+    if (online.role === "host") restartOnline();
+    else { Net.send({ t: "new-request" }); online.note = WORDS.online.askedNew; render(); }   // the host decides
+    return;
+  }
+  newGame();
+}
+
+const otherSide = side => side === "goat" ? "tiger" : "goat";
+function sendState() { Net.send({ t: "state", game, guestSide: otherSide(online.mySide) }); }
+function restartOnline() { online.mySide = $("mySide").value; newGame(); sendState(); }      // host only
+
+function createRoom() {
+  Net.close(); online = freshOnline(); online.role = "host"; online.msg = WORDS.online.setup;
+  Net.host({
+    ready:     code => { online.code = code; online.msg = WORDS.online.waiting(code); render(); },
+    connected: () => { online.connected = true; online.note = ""; if (!online.mySide) online.mySide = $("mySide").value; sendState(); render(); },   // a friend joined or rejoined
+    message:   onNetMessage,
+    disconnected: () => { online.connected = false; online.msg = WORDS.online.left; render(); },
+    error:     showNetError
+  });
+  render();
+}
+
+function joinRoom() {
+  const code = $("joinCode").value.trim().toUpperCase();
+  if (!/^[A-Z0-9]{5}$/.test(code)) { online.note = WORDS.online.badCode; render(); return; }
+  Net.close(); online = freshOnline(); online.role = "guest"; online.code = code; online.msg = WORDS.online.joining;
+  Net.join(code, {
+    connected: () => { online.connected = true; render(); },                         // the host's game arrives next, as a "state" message
+    message:   onNetMessage,
+    disconnected: () => { online.connected = false; online.code = null; online.msg = WORDS.online.leftGuest; render(); },
+    error:     showNetError
+  });
+  render();
+}
+
+function onNetMessage(msg) {
+  if (!msg || typeof msg !== "object" || !isOnline()) return;
+  if (msg.t === "state" && online.role === "guest") {                 // the whole game (first connect, rejoin, or new game)
+    if (!msg.game || !Array.isArray(msg.game.board) || msg.game.board.length !== 25) return;
+    game = msg.game; online.mySide = msg.guestSide === "tiger" ? "tiger" : "goat";
+    selected = null; history = []; popupClosed = false; online.note = "";
+    render();
+  } else if (msg.t === "move") {
+    if (game.winner || !online.mySide || game.turn === online.mySide) return;   // not their turn: ignore
+    const m = Rules.findMove(game, msg);                                         // OUR rules decide what is legal
+    if (!m) { if (online.role === "guest") Net.send({ t: "sync-request" }); return; }
+    playMove(m); render();
+  } else if (msg.t === "sync-request" && online.role === "host") {
+    sendState();                                                                 // the guest's board drifted: send the real one
+  } else if (msg.t === "new-request" && online.role === "host") {
+    if (confirm(WORDS.online.askNew)) restartOnline(); else Net.send({ t: "new-declined" });
+  } else if (msg.t === "new-declined" && online.role === "guest") {
+    online.note = WORDS.online.declined; render();
+  }
+}
+
+function showNetError(err) {
+  if (online.connected) return;                // a live game carries on; the heartbeat in net.js notices if the link really dies
+  const type = err && err.type;
+  const text = type === "peer-unavailable" ? WORDS.online.notFound
+    : ["network", "server-error", "socket-error", "socket-closed", "browser-incompatible", "ssl-unavailable"].includes(type) ? WORDS.online.noService
+    : type === "timeout" || type === "webrtc" ? WORDS.online.noPath
+    : `${WORDS.online.problem} (${type || err})`;
+  Net.close(); online = freshOnline(); online.msg = text; online.note = text;
+  render();
+}
+
+function renderOnline() {
+  $("onlineBox").hidden = !isOnline();
+  if (!isOnline()) return;
+  $("lobby").hidden    = !!online.code;
+  $("roomInfo").hidden = !online.code;
+  $("roomCode").textContent = online.code || "";
+  $("copyLink").hidden = online.role !== "host";
+  $("onlineNote").textContent = online.note;
+}
+
+function copyInvite() {
+  const url = `${location.href.split(/[?#]/)[0]}?room=${online.code}`;
+  (navigator.clipboard ? navigator.clipboard.writeText(url) : Promise.reject())
+    .then(() => { online.note = WORDS.online.copied; render(); }, () => { online.note = url; render(); });   // if copying is blocked, just show the link
 }
 
 // ---- start-up ----
@@ -195,12 +340,26 @@ document.querySelectorAll("[data-icon]").forEach(el => el.textContent = `${icon(
 document.querySelectorAll("[data-rule]").forEach(el => el.textContent = Rules.config[el.dataset.rule]);
 
 $("grid").addEventListener("click", e => { const pt = e.target.closest(".point"); if (pt) onPointClick(Number(pt.dataset.p)); });
-$("new").onclick = newGame;
+let savedAnim = null;
+try { savedAnim = localStorage.getItem(ANIM_KEY); } catch (e) {}
+setAnimations(savedAnim ? savedAnim === "on" : !(window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches), false);
+$("animToggle").onchange = () => setAnimations($("animToggle").checked, true);
+
+$("new").onclick = onNewGameClick;
 $("undo").onclick = undo;
-$("overNew").onclick = newGame;
+$("overNew").onclick = onNewGameClick;
 $("overClose").onclick = () => { popupClosed = true; render(); };
-$("mode").onchange = newGame;       // changing mode or side starts a fresh game
-$("mySide").onchange = newGame;
+$("mode").onchange = onModeChange;   // changing mode or side starts a fresh game
+$("mySide").onchange = onSideChange;
+$("createRoom").onclick = createRoom;
+$("joinRoom").onclick = joinRoom;
+$("copyLink").onclick = copyInvite;
+$("joinCode").oninput = e => { e.target.value = e.target.value.toUpperCase(); };
+$("joinCode").onkeydown = e => { if (e.key === "Enter") joinRoom(); };
 if (window.innerWidth > 1100) $("about").open = true;   // show the rules on wide screens
 
 newGame();
+
+// An invite link (…/index.html?room=ABCDE) opens straight into joining that game.
+const roomFromLink = new URLSearchParams(location.search).get("room");
+if (roomFromLink) { $("mode").value = "online"; onModeChange(); $("joinCode").value = roomFromLink.toUpperCase(); joinRoom(); }
