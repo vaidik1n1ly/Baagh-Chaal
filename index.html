@@ -4,40 +4,49 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Baagh-Chaal</title>
-  <link rel="stylesheet" href="css/theme.css">   <!-- colours, icons, sizes -->
-  <link rel="stylesheet" href="css/style.css">   <!-- layout -->
+  <link rel="stylesheet" href="css/theme.css">
+  <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
 
-<h1><span data-icon="tiger"></span> Baagh-Chaal <span data-icon="goat"></span></h1>
+<main id="startScreen" class="screen start-screen">
+  <section class="start-card panel">
+    <h1><span data-icon="tiger"></span> Baagh-Chaal <span data-icon="goat"></span></h1>
 
-<!-- ORDER MATTERS: board first, then controls, then rules.
-     (style.css moves them around on bigger screens; on phones this order is what you see.) -->
-<div class="layout">
-
-  <main class="stage">
-    <div class="turn" id="turn">
-      <span id="status"></span>
-      <span id="phaseLine"></span>
-    </div>
-    <div id="board"><div id="grid"></div></div>
-  </main>
-
-  <section class="panel" id="gamePanel">
-    <h2 id="gamePanelTitle">Game</h2>
-    <div class="settings">
-      <label>Mode
-        <select id="mode"><option value="2p">2 players</option><option value="cpu" selected>vs Computer</option><option value="online">Online (friend)</option></select>
-      </label>
-      <label class="cpu-only" id="sideRow">You play
-        <select id="mySide"><option value="goat" data-icon="goat">Goats</option><option value="tiger" data-icon="tiger">Tigers</option></select>
-      </label>
-      <label class="cpu-only" id="levelRow">Level
-        <select id="level"><option value="1">Easy</option><option value="2" selected>Medium</option><option value="4">Hard</option></select>
-      </label>
+    <div class="setting-block">
+      <div class="setting-label">Mode</div>
+      <div class="choice-row" role="group" aria-label="Mode">
+        <button type="button" class="choice" data-mode="cpu">vs Computer</button>
+        <button type="button" class="choice" data-mode="2p">2 players</button>
+        <button type="button" class="choice" data-mode="online">Online</button>
+      </div>
     </div>
 
-    <!-- Online play: only shown when Mode = "Online (friend)" -->
+    <div class="setting-block" id="sideSetting">
+      <div class="setting-label">You play</div>
+      <div class="choice-row" role="group" aria-label="You play">
+        <button type="button" class="choice" data-side="goat"><span data-icon="goat"></span> Goats</button>
+        <button type="button" class="choice" data-side="tiger"><span data-icon="tiger"></span> Tigers</button>
+      </div>
+    </div>
+
+    <div class="setting-block" id="levelSetting">
+      <div class="setting-label">Level</div>
+      <div class="choice-row" role="group" aria-label="Level">
+        <button type="button" class="choice" data-level="1">Easy</button>
+        <button type="button" class="choice" data-level="2">Medium</button>
+        <button type="button" class="choice" data-level="4">Hard</button>
+      </div>
+    </div>
+
+    <!-- These selects keep the existing ui.js settings API small and stable. -->
+    <div class="legacy-settings" aria-hidden="true">
+      <select id="mode"><option value="2p">2 players</option><option value="cpu">vs Computer</option><option value="online">Online</option></select>
+      <select id="mySide"><option value="goat">Goats</option><option value="tiger">Tigers</option></select>
+      <select id="level"><option value="1">Easy</option><option value="2">Medium</option><option value="4">Hard</option></select>
+      <span id="sideRow"></span><span id="levelRow"></span>
+    </div>
+
     <div class="online" id="onlineBox" hidden>
       <div id="lobby">
         <button id="createRoom">Create game</button>
@@ -53,60 +62,68 @@
       <p id="onlineNote" class="note"></p>
     </div>
 
-    <div class="stats">
-      <div class="stat"><b id="trapped"></b><small>Tigers Trapped</small></div>
-      <div class="stat"><b id="inHand"></b><small>Goats In hand</small></div>
-      <div class="stat"><b id="onBoard"></b><small>Goats On board</small></div>
-      <div class="stat"><b><span id="captured"></span>/<span data-rule="capturesToWin"></span></b><small>Goats Captured</small></div>
-    </div>
+    <button id="play" class="primary big">Play</button>
+    <button id="backToGame" class="secondary back-button" hidden>Back to game</button>
+    <p id="startStatus" class="remember">Remembers your last choice</p>
 
-    <label class="check" style="display: none;"><input type="checkbox" id="animToggle"> Animations</label>
-
-    <div class="btn-row">
-      <button id="new">New game</button>
-      <button id="undo" class="secondary">↩ Undo</button>
-    </div>
+    <details class="how-to">
+      <summary>How to play</summary>
+      <p>A traditional Nepali strategy game: four tigers against twenty goats.</p>
+      <h4 data-icon="tiger">Tigers</h4>
+      <ul><li>Move to a connected empty point, or jump over a goat to capture it.</li></ul>
+      <h4 data-icon="goat">Goats</h4>
+      <ul><li>Goats go first and are placed one at a time.</li><li>After all <span data-rule="goatsTotal"></span> are placed, goats move.</li></ul>
+      <h4>How to win</h4>
+      <ul><li>Tigers: capture <span data-rule="capturesToWin"></span> goats.</li><li>Goats: trap every tiger.</li><li>Draw: the same position happens <span data-rule="repeatsForDraw"></span> times.</li></ul>
+    </details>
   </section>
+</main>
 
-  <details class="panel" id="about">
-    <summary>How to play</summary>
-    <p>A traditional Nepali strategy game: four tigers against twenty goats.</p>
-    <h4 data-icon="tiger">Tigers</h4>
-    <ul>
-      <li>Select a tiger to see where it can go (green).</li>
-      <li>Move to a connected empty point, or jump over a goat to capture it (red).</li>
-    </ul>
-    <h4 data-icon="goat">Goats</h4>
-    <ul>
-      <li>Goats go first and are placed one at a time.</li>
-      <li>After all <span data-rule="goatsTotal"></span> are placed, goats move to connected empty points.</li>
-      <li>Goats cannot capture.</li>
-    </ul>
-    <h4>How to win</h4>
-    <ul>
-      <li>Tigers: capture <span data-rule="capturesToWin"></span> goats.</li>
-      <li>Goats: trap every tiger so none can move.</li>
-      <li>Draw: the same position happens <span data-rule="repeatsForDraw"></span> times.</li>
-    </ul>
-  </details>
+<main id="gameScreen" class="screen game-screen" hidden>
+  <header class="game-header">
+    <div id="summary">You: goats · vs Computer · Medium</div>
+    <button id="gear" class="icon-button" aria-label="Settings" title="Settings">⚙</button>
+  </header>
 
-</div>
+  <div class="game-layout">
+    <section class="game-stage">
+      <div class="turn" id="turn">
+        <span id="status"></span>
+        <span id="phaseLine"></span>
+      </div>
+      <div id="board"><div id="grid"></div></div>
+    </section>
+
+    <aside class="game-info">
+      <div class="stats">
+        <div class="stat"><b id="trapped"></b><small>Tigers Trapped</small></div>
+        <div class="stat"><b id="inHand"></b><small>Goats In hand</small></div>
+        <div class="stat"><b id="onBoard"></b><small>Goats On board</small></div>
+        <div class="stat"><b><span id="captured"></span>/<span data-rule="capturesToWin"></span></b><small>Goats Captured</small></div>
+      </div>
+      <div class="btn-row">
+        <button id="new">New game</button>
+        <button id="undo" class="secondary">↩ Undo</button>
+      </div>
+    </aside>
+  </div>
+</main>
 
 <div id="overlay">
   <div class="popup" id="popup">
     <h2 id="overTitle"></h2>
     <p id="overMsg"></p>
     <div class="btn-row">
-      <button id="overNew">New game</button>
-      <button id="overClose" class="secondary">View board</button>
+      <button id="overNew">Play again</button>
+      <button id="overSettings" class="secondary">Change settings</button>
     </div>
   </div>
 </div>
 
-<script src="js/rules.js"></script>  <!-- the game rules (no screen code) -->
-<script src="js/ai.js"></script>     <!-- the computer player -->
-<script src="js/vendor/peerjs.min.js"></script>  <!-- PeerJS: the connection library (used by net.js only) -->
-<script src="js/net.js"></script>    <!-- online play: the link between two players -->
-<script src="js/ui.js"></script>     <!-- screen + clicks (no rules) -->
+<script src="js/rules.js"></script>
+<script src="js/ai.js"></script>
+<script src="js/vendor/peerjs.min.js"></script>
+<script src="js/net.js"></script>
+<script src="js/ui.js"></script>
 </body>
 </html>
