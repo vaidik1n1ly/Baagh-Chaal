@@ -9,13 +9,23 @@
 </head>
 <body>
 
+<!-- The settings that are in use right now. The start screen changes them (see js/ui.js). -->
+<input type="hidden" id="mode" value="cpu">
+<input type="hidden" id="mySide" value="goat">
+<input type="hidden" id="level" value="2">
+
 <h1><span data-icon="tiger"></span> Baagh-Chaal <span data-icon="goat"></span></h1>
 
-<!-- ORDER MATTERS: board first, then controls, then rules.
-     (style.css moves them around on bigger screens; on phones this order is what you see.) -->
 <div class="layout">
 
   <main class="stage">
+    <div class="infobar">
+      <span id="summary"></span>
+      <span class="tools">
+        <button id="rulesBtn" class="secondary tool" aria-label="How to play" title="How to play">?<span class="lbl"> Rules</span></button>
+        <button id="settingsBtn" class="secondary tool" aria-label="Settings" title="Settings">⚙<span class="lbl"> Settings</span></button>
+      </span>
+    </div>
     <div class="turn" id="turn">
       <span id="status"></span>
       <span id="phaseLine"></span>
@@ -23,36 +33,9 @@
     <div id="board"><div id="grid"></div></div>
   </main>
 
-  <section class="panel" id="gamePanel">
-    <h2 id="gamePanelTitle">Game</h2>
-    <div class="settings">
-      <label>Mode
-        <select id="mode"><option value="2p">2 players</option><option value="cpu" selected>vs Computer</option><option value="online">Online (friend)</option></select>
-      </label>
-      <label class="cpu-only" id="sideRow">You play
-        <select id="mySide"><option value="goat" data-icon="goat">Goats</option><option value="tiger" data-icon="tiger">Tigers</option></select>
-      </label>
-      <label class="cpu-only" id="levelRow">Level
-        <select id="level"><option value="1">Easy</option><option value="2" selected>Medium</option><option value="4">Hard</option></select>
-      </label>
-    </div>
-
-    <!-- Online play: only shown when Mode = "Online (friend)" -->
-    <div class="online" id="onlineBox" hidden>
-      <div id="lobby">
-        <button id="createRoom">Create game</button>
-        <div class="join-row">
-          <input id="joinCode" placeholder="Friend's code" maxlength="5" autocapitalize="characters" autocomplete="off" spellcheck="false" aria-label="Friend's game code">
-          <button id="joinRoom" class="secondary">Join</button>
-        </div>
-      </div>
-      <div id="roomInfo" class="room" hidden>
-        <span>Game code <b id="roomCode"></b></span>
-        <button id="copyLink" class="secondary">Copy invite link</button>
-      </div>
-      <p id="onlineNote" class="note"></p>
-    </div>
-
+  
+  
+  <section class="panel" id="side">
     <div class="stats">
       <div class="stat"><b id="trapped"></b><small>Tigers Trapped</small></div>
       <div class="stat"><b id="inHand"></b><small>Goats In hand</small></div>
@@ -66,42 +49,113 @@
       <button id="new">New game</button>
       <button id="undo" class="secondary">↩ Undo</button>
     </div>
-  </section>
 
-  <details class="panel" id="about">
-    <summary>How to play</summary>
-    <p>A traditional Nepali strategy game: four tigers against twenty goats.</p>
-    <h4 data-icon="tiger">Tigers</h4>
-    <ul>
-      <li>Select a tiger to see where it can go (green).</li>
-      <li>Move to a connected empty point, or jump over a goat to capture it (red).</li>
-    </ul>
-    <h4 data-icon="goat">Goats</h4>
-    <ul>
-      <li>Goats go first and are placed one at a time.</li>
-      <li>After all <span data-rule="goatsTotal"></span> are placed, goats move to connected empty points.</li>
-      <li>Goats cannot capture.</li>
-    </ul>
-    <h4>How to win</h4>
-    <ul>
-      <li>Tigers: capture <span data-rule="capturesToWin"></span> goats.</li>
-      <li>Goats: trap every tiger so none can move.</li>
-      <li>Draw: the same position happens <span data-rule="repeatsForDraw"></span> times.</li>
-    </ul>
-  </details>
+  </section>
 
 </div>
 
+<!-- START SCREEN: opens every time the page loads, with your last choices already selected -->
+<dialog id="startScreen" aria-labelledby="startTitle">
+  <h2 id="startTitle"><span data-icon="tiger"></span> Baagh-Chaal <span data-icon="goat"></span></h2>
+  <p class="tagline">Four tigers against twenty goats</p>
+
+  <div class="field">
+    <span class="field-label" id="lblMode">Mode</span>
+    <div class="seg" role="radiogroup" aria-labelledby="lblMode" data-key="mode">
+      <button type="button" role="radio" data-value="cpu">vs Computer</button>
+      <button type="button" role="radio" data-value="2p">2 players</button>
+      <button type="button" role="radio" data-value="online">Online</button>
+    </div>
+  </div>
+
+  <div class="field" id="rowSide">
+    <span class="field-label" id="sideLabel">You play</span>
+    <div class="seg" role="radiogroup" aria-labelledby="sideLabel" data-key="side">
+      <button type="button" role="radio" data-value="goat"><span data-icon="goat">Goats</span></button>
+      <button type="button" role="radio" data-value="tiger"><span data-icon="tiger">Tigers</span></button>
+    </div>
+  </div>
+
+  <div class="field" id="rowLevel">
+    <span class="field-label" id="lblLevel">Level</span>
+    <div class="seg" role="radiogroup" aria-labelledby="lblLevel" data-key="level">
+      <button type="button" role="radio" data-value="1">Easy</button>
+      <button type="button" role="radio" data-value="2">Medium</button>
+      <button type="button" role="radio" data-value="4">Hard</button>
+    </div>
+  </div>
+
+  <!-- Online play: only shown when Mode = "Online" -->
+  <div class="online" id="onlineBox" hidden>
+    <p id="onlineMsg" class="note msg"></p>
+    <div id="lobby">
+      <button id="createRoom">Create game</button>
+      <div class="join-row">
+        <input id="joinCode" placeholder="Friend's code" maxlength="5" autocapitalize="characters" autocomplete="off" spellcheck="false" aria-label="Friend's game code">
+        <button id="joinRoom" class="secondary">Join</button>
+      </div>
+    </div>
+    <div id="roomInfo" class="room" hidden>
+      <span>Game code <b id="roomCode"></b></span>
+      <span class="room-actions">
+        <button id="copyLink" class="secondary">Copy invite link</button>
+        <button id="cancelOnline" class="secondary">Cancel</button>
+      </span>
+    </div>
+    <p id="onlineLive" class="note msg" hidden>You're connected to your friend. Go back to the game to keep playing.</p>
+    <p id="onlineNote" class="note"></p>
+  </div>
+
+  <div class="start-actions">
+    <button id="playBtn">Play</button>
+    <button id="startBack" class="secondary">Back to game</button>
+  </div>
+
+  <details class="how-to" id="howtoBtn">
+    <summary>How to play</summary>
+  </details>
+</dialog>
+
+<!-- RULES -->
+<dialog id="rulesDlg" aria-labelledby="rulesTitle">
+  <h2 id="rulesTitle">How to play</h2>
+  <p>A traditional Nepali strategy game: four tigers against twenty goats.</p>
+  <h4 data-icon="tiger">Tigers</h4>
+  <ul>
+    <li>Select a tiger to see where it can go (green).</li>
+    <li>Move to a connected empty point, or jump over a goat to capture it (red).</li>
+  </ul>
+  <h4 data-icon="goat">Goats</h4>
+  <ul>
+    <li>Goats go first and are placed one at a time.</li>
+    <li>After all <span data-rule="goatsTotal"></span> are placed, goats move to connected empty points.</li>
+    <li>Goats cannot capture.</li>
+  </ul>
+  <h4>How to win</h4>
+  <ul>
+    <li>Tigers: capture <span data-rule="capturesToWin"></span> goats.</li>
+    <li>Goats: trap every tiger so none can move.</li>
+    <li>Draw: the same position happens <span data-rule="repeatsForDraw"></span> times.</li>
+  </ul>
+  <div class="btn-row"><button id="rulesClose">Got it</button></div>
+</dialog>
+
+<!-- GAME OVER -->
 <div id="overlay">
   <div class="popup" id="popup">
     <h2 id="overTitle"></h2>
     <p id="overMsg"></p>
     <div class="btn-row">
-      <button id="overNew">New game</button>
+      <button id="overNew">Play again</button>
       <button id="overClose" class="secondary">View board</button>
+    </div>
+    <div class="btn=row">
+      <button id="overSettings" class="secondary">Change settings</button>
     </div>
   </div>
 </div>
+
+<div id="toast" role="status" aria-live="polite" hidden></div>
 
 <script src="js/rules.js"></script>  <!-- the game rules (no screen code) -->
 <script src="js/ai.js"></script>     <!-- the computer player -->
