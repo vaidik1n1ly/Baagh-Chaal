@@ -18,6 +18,12 @@ const WORDS = {
   turn2p: (ic, side, action) => `${ic} ${side}: ${action}`,
   win: who => `${who} win!`,
 
+  // Start screen / settings
+  sideName: { goat: "Goats", tiger: "Tigers" },
+  levels:   { "1": "Easy", "2": "Medium", "4": "Hard" },
+  newGameAsk:  "Start a new game? Your current game will be lost.",
+  leaveOnline: "Leave the online game?",
+
   // Online
   opponentTurn: ic => `Opponent's turn (${ic})`,
   online: {
@@ -69,6 +75,13 @@ let prevTrapped = 0;      // for the "trapped" counter bump
 let animate = null;      // the move to animate on the NEXT render (set right after a move, then cleared)
 let popupTimer = null;
 let online = { role: null, connected: false, mySide: null, code: null, msg: "", note: "" };   // see "online play" below
+
+const startDlg = $("startScreen"), rulesDlg = $("rulesDlg");
+const nav = window.history;            // (the undo list is called `history`, so the browser's history gets another name here)
+const SETTINGS_KEY = "baagh-chaal-settings";
+const DEFAULT_SETTINGS = { mode: "cpu", side: "goat", level: "2" };
+let draft = { ...DEFAULT_SETTINGS };   // what the start screen is showing; it only becomes real when you press Play / Create / Join
+let started = false;                   // has a game been started on this visit? (then the start screen can be closed to go back to it)
 
 const vsComputer     = () => $("mode").value === "cpu";
 const computerSide   = () => $("mySide").value === "goat" ? "tiger" : "goat";
@@ -206,9 +219,8 @@ function render() {
   $("phaseLine").textContent = game.winner ? "Game over" : game.goatsInHand > 0 ? "Placement phase" : "Movement phase";
   if (game.winner) delete $("turn").dataset.side; else $("turn").dataset.side = game.turn;   // while playing: tinted by side
   setResult($("turn"), result);                                                              // at the end: green / red / blue
-  $("sideRow").hidden  = !isPersonal() || (isOnline() && online.role === "guest");   // "You play": vs computer, or the host online
-  $("levelRow").hidden = !vsComputer();                                                // "Level": vs computer only
-  renderOnline();
+  $("summary").textContent = summaryText();                      // "You: Goats · vs Computer · Medium"
+  if (startDlg.open) renderStart();                              // keep the start screen up to date (online messages etc.)
   $("inHand").textContent   = game.goatsInHand;
   $("onBoard").textContent  = game.board.filter(v => v === "goat").length;
   $("captured").textContent = game.captured;
@@ -247,15 +259,13 @@ function onModeChange() {
   Net.close(); online = freshOnline();
   newGame();                                  // a fresh local board (online, it stays locked until a friend connects)
 }
-function onSideChange() { if (!isOnline()) newGame(); }   // online, the host's choice is used at the next new game
 
 function onNewGameClick() {
-  if (isOnline() && online.connected) {
-    if (online.role === "host") restartOnline();
-    else { Net.send({ t: "new-request" }); online.note = WORDS.online.askedNew; render(); }   // the host decides
-    return;
+  if (isOnline() && online.connected && online.role === "guest") {                  // online guest: ask the host
+    Net.send({ t: "new-request" }); toast(WORDS.online.askedNew); return;
   }
-  newGame();
+  if (!game.winner && history.length > 0 && !confirm(WORDS.newGameAsk)) return;     // don't lose a game by accident
+  if (isOnline() && online.connected) restartOnline(); else newGame();              // same settings, straight away
 }
 
 const otherSide = side => side === "goat" ? "tiger" : "goat";
@@ -266,9 +276,9 @@ function createRoom() {
   Net.close(); online = freshOnline(); online.role = "host"; online.msg = WORDS.online.setup;
   Net.host({
     ready:     code => { online.code = code; online.msg = WORDS.online.waiting(code); render(); },
-    connected: () => { online.connected = true; online.note = ""; if (!online.mySide) online.mySide = $("mySide").value; sendState(); render(); },   // a friend joined or rejoined
+    connected: () => { online.connected = true; online.note = ""; if (!online.mySide) online.mySide = $("mySide").value; sendState(); started = true; render(); enterPlay(); },   // a friend joined or rejoined: show the game
     message:   onNetMessage,
-    disconnected: () => { online.connected = false; online.msg = WORDS.online.left; render(); },
+    disconnected: () => { online.connected = false; online.msg = WORDS.online.left; render(); openStart(); },
     error:     showNetError
   });
   render();
@@ -281,7 +291,7 @@ function joinRoom() {
   Net.join(code, {
     connected: () => { online.connected = true; render(); },                         // the host's game arrives next, as a "state" message
     message:   onNetMessage,
-    disconnected: () => { online.connected = false; online.code = null; online.msg = WORDS.online.leftGuest; render(); },
+    disconnected: () => { online.connected = false; online.code = null; online.msg = WORDS.online.leftGuest; render(); openStart(); },
     error:     showNetError
   });
   render();
@@ -293,7 +303,7 @@ function onNetMessage(msg) {
     if (!msg.game || !Array.isArray(msg.game.board) || msg.game.board.length !== 25) return;
     game = msg.game; online.mySide = msg.guestSide === "tiger" ? "tiger" : "goat";
     selected = null; history = []; popupClosed = false; online.note = "";
-    render();
+    started = true; render(); enterPlay();                              // the game is here: leave the start screen
   } else if (msg.t === "move") {
     if (game.winner || !online.mySide || game.turn === online.mySide) return;   // not their turn: ignore
     const m = Rules.findMove(game, msg);                                         // OUR rules decide what is legal
@@ -304,7 +314,7 @@ function onNetMessage(msg) {
   } else if (msg.t === "new-request" && online.role === "host") {
     if (confirm(WORDS.online.askNew)) restartOnline(); else Net.send({ t: "new-declined" });
   } else if (msg.t === "new-declined" && online.role === "guest") {
-    online.note = WORDS.online.declined; render();
+    toast(WORDS.online.declined);
   }
 }
 
@@ -315,18 +325,8 @@ function showNetError(err) {
     : ["network", "server-error", "socket-error", "socket-closed", "browser-incompatible", "ssl-unavailable"].includes(type) ? WORDS.online.noService
     : type === "timeout" || type === "webrtc" ? WORDS.online.noPath
     : `${WORDS.online.problem} (${type || err})`;
-  Net.close(); online = freshOnline(); online.msg = text; online.note = text;
-  render();
-}
-
-function renderOnline() {
-  $("onlineBox").hidden = !isOnline();
-  if (!isOnline()) return;
-  $("lobby").hidden    = !!online.code;
-  $("roomInfo").hidden = !online.code;
-  $("roomCode").textContent = online.code || "";
-  $("copyLink").hidden = online.role !== "host";
-  $("onlineNote").textContent = online.note;
+  Net.close(); online = freshOnline(); online.msg = text;
+  render(); openStart();                       // show the problem on the start screen
 }
 
 function copyInvite() {
@@ -334,6 +334,91 @@ function copyInvite() {
   (navigator.clipboard ? navigator.clipboard.writeText(url) : Promise.reject())
     .then(() => { online.note = WORDS.online.copied; render(); }, () => { online.note = url; render(); });   // if copying is blocked, just show the link
 }
+
+// ============================================================
+// START SCREEN + SETTINGS. It opens every time the page loads, with your last choices already selected.
+// Nothing changes until you press Play (or Create / Join for an online game).
+// ============================================================
+const settingsNow = () => ({ mode: $("mode").value, side: $("mySide").value, level: $("level").value });
+
+function loadSettings() {
+  try {
+    const s = JSON.parse(localStorage.getItem(SETTINGS_KEY));
+    if (s && ["cpu", "2p", "online"].includes(s.mode) && ["goat", "tiger"].includes(s.side) && ["1", "2", "4"].includes(s.level)) return s;
+  } catch (e) {}
+  return { ...DEFAULT_SETTINGS };
+}
+function commitDraft(remember = true) {          // make the start screen's choices the real settings (and remember them for next time)
+  $("mode").value = draft.mode; $("mySide").value = draft.side; $("level").value = draft.level;
+  if (remember) { try { localStorage.setItem(SETTINGS_KEY, JSON.stringify(draft)); } catch (e) {} }
+}
+
+function summaryText() {                        // the one line shown above the board while playing
+  const me = side => `${icon(side)} ${WORDS.sideName[side]}`;
+  if (vsComputer()) return `You: ${me($("mySide").value)} · vs Computer · ${WORDS.levels[$("level").value]}`;
+  if (isOnline())   return online.connected && online.mySide ? `Online · You: ${me(online.mySide)}` : "Online";
+  return "2 players";
+}
+
+const onlineLive = () => isOnline() && online.connected && !!online.mySide;     // connected to a friend right now
+
+function renderStart() {
+  document.querySelectorAll(".seg button").forEach(b => b.setAttribute("aria-checked", String(draft[b.parentElement.dataset.key] === b.dataset.value)));
+  $("rowSide").hidden   = draft.mode === "2p" || (draft.mode === "online" && onlineLive());
+  $("rowLevel").hidden  = draft.mode !== "cpu";
+  $("onlineBox").hidden = draft.mode !== "online";
+  $("playBtn").hidden   = draft.mode === "online";               // online has Create / Join instead
+  $("startBack").hidden = !started;                              // there's only a game to go back to once one has started
+  $("sideLabel").textContent = draft.mode === "online" ? "You play (when you create a game)" : "You play";
+  renderOnline();
+}
+
+function renderOnline() {
+  const live = onlineLive();
+  $("lobby").hidden      = !!online.code || live;
+  $("roomInfo").hidden   = !online.code || live;
+  $("onlineLive").hidden = !live;
+  $("onlineMsg").textContent  = live ? "" : online.msg || "";
+  $("roomCode").textContent   = online.code || "";
+  $("copyLink").hidden = online.role !== "host";
+  $("onlineNote").textContent = online.note;
+}
+
+function showDialog(d) { if (!d.open) { if (d.showModal) d.showModal(); else d.setAttribute("open", ""); } }
+function hideDialog(d) { if (d.open) { if (d.close) d.close(); else d.removeAttribute("open"); } }
+
+// The start screen is a step in the browser's history, so the Back button opens it (instead of leaving the site)
+// and Forward / "Back to game" returns to the game.
+const viewNow = () => (nav.state && nav.state.view) || "start";
+function openStart() {
+  if (started && viewNow() === "play") { nav.back(); return; }   // the popstate handler below shows it
+  draft = settingsNow(); showDialog(startDlg); renderStart();
+}
+function enterPlay() {
+  if (viewNow() !== "play") nav.pushState({ view: "play" }, "");
+  hideDialog(startDlg);
+}
+window.addEventListener("popstate", () => { if (viewNow() === "start") { draft = settingsNow(); showDialog(startDlg); renderStart(); } else hideDialog(startDlg); });
+
+const gameInProgress = () => started && !game.winner && (online.connected || history.length > 0);
+function confirmLeave() { return !gameInProgress() || confirm(online.connected ? WORDS.leaveOnline : WORDS.newGameAsk); }
+
+function onPlayClick() {                         // vs Computer or 2 players
+  if (!confirmLeave()) return;
+  commitDraft(); onModeChange();                 // a fresh game with the chosen settings
+  started = true; enterPlay();
+}
+function onCreateClick() { if (!confirmLeave()) return; commitDraft(); onModeChange(); createRoom(); }
+function joinFromStart(remember) {
+  const code = $("joinCode").value.trim().toUpperCase();
+  if (!/^[A-Z0-9]{5}$/.test(code)) { online.note = WORDS.online.badCode; renderStart(); return; }
+  if (!confirmLeave()) return;
+  commitDraft(remember); onModeChange(); joinRoom();
+}
+function onCancelOnline() { Net.close(); online = freshOnline(); renderStart(); }
+
+let toastTimer = null;
+function toast(text) { const t = $("toast"); t.textContent = text; t.hidden = false; clearTimeout(toastTimer); toastTimer = setTimeout(() => { t.hidden = true; }, 3500); }
 
 // ---- start-up ----
 document.querySelectorAll("[data-icon]").forEach(el => el.textContent = `${icon(el.dataset.icon)} ${el.textContent}`.trim());
@@ -348,18 +433,29 @@ $("animToggle").onchange = () => setAnimations($("animToggle").checked, true);
 $("new").onclick = onNewGameClick;
 $("undo").onclick = undo;
 $("overNew").onclick = onNewGameClick;
+$("overSettings").onclick = () => { popupClosed = true; render(); openStart(); };
 $("overClose").onclick = () => { popupClosed = true; render(); };
-$("mode").onchange = onModeChange;   // changing mode or side starts a fresh game
-$("mySide").onchange = onSideChange;
-$("createRoom").onclick = createRoom;
-$("joinRoom").onclick = joinRoom;
+$("settingsBtn").onclick = openStart;
+$("rulesBtn").onclick = () => showDialog(rulesDlg);
+$("rulesClose").onclick = () => hideDialog(rulesDlg);
+$("howtoBtn").onclick = () => showDialog(rulesDlg);
+
+document.querySelectorAll(".seg button").forEach(b => b.onclick = () => { draft[b.parentElement.dataset.key] = b.dataset.value; renderStart(); });
+$("playBtn").onclick = onPlayClick;
+$("startBack").onclick = enterPlay;
+$("createRoom").onclick = onCreateClick;
+$("joinRoom").onclick = () => joinFromStart(true);
 $("copyLink").onclick = copyInvite;
+$("cancelOnline").onclick = onCancelOnline;
 $("joinCode").oninput = e => { e.target.value = e.target.value.toUpperCase(); };
-$("joinCode").onkeydown = e => { if (e.key === "Enter") joinRoom(); };
-if (window.innerWidth > 1100) $("about").open = true;   // show the rules on wide screens
+$("joinCode").onkeydown = e => { if (e.key === "Enter") joinFromStart(true); };
+startDlg.addEventListener("cancel", e => { e.preventDefault(); if (started) enterPlay(); });   // Esc only closes the start screen if there's a game to go back to
 
-newGame();
+nav.replaceState({ view: "start" }, "");
+draft = loadSettings(); commitDraft(false);      // your last choices drive the game behind the start screen
+game = Rules.newGame(); render();                // just show the starting board; nothing starts until you press Play
+showDialog(startDlg); renderStart();
 
-// An invite link (…/index.html?room=ABCDE) opens straight into joining that game.
+// An invite link (…/index.html?room=ABCDE) goes straight to joining that game (and doesn't change your remembered choices).
 const roomFromLink = new URLSearchParams(location.search).get("room");
-if (roomFromLink) { $("mode").value = "online"; onModeChange(); $("joinCode").value = roomFromLink.toUpperCase(); joinRoom(); }
+if (roomFromLink) { draft.mode = "online"; $("joinCode").value = roomFromLink.toUpperCase(); joinFromStart(false); }
