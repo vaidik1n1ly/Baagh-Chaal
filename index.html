@@ -18,14 +18,15 @@
 
 <div class="layout">
 
+  <div class="infobar" id="info">
+    <span id="summary"></span>
+    <span class="tools">
+      <button id="rulesBtn" class="secondary tool" aria-label="How to play" title="How to play">?<span class="lbl"> Rules</span></button>
+      <button id="settingsBtn" class="secondary tool" aria-label="Settings" title="Settings">⚙<span class="lbl"> Settings</span></button>
+    </span>
+  </div>
+
   <main class="stage">
-    <div class="infobar">
-      <span id="summary"></span>
-      <span class="tools">
-        <button id="rulesBtn" class="secondary tool" aria-label="How to play" title="How to play">?<span class="lbl"> Rules</span></button>
-        <button id="settingsBtn" class="secondary tool" aria-label="Settings" title="Settings">⚙<span class="lbl"> Settings</span></button>
-      </span>
-    </div>
     <div class="turn" id="turn">
       <span id="status"></span>
       <span id="phaseLine"></span>
@@ -48,9 +49,35 @@
     <div class="btn-row">
       <button id="new">New game</button>
       <button id="undo" class="secondary">↩ Undo</button>
+      <button id="settingsBtnSide" class="secondary wide">⚙ Settings</button>
     </div>
 
   </section>
+
+  <!-- HOW TO PLAY: the left panel on wide screens; on phones/tablets it fills the space under the game -->
+  <details class="panel" id="about">
+    <summary id="aboutSummary">How to play</summary>
+    <div class="rules-body">
+      <p>A traditional Nepali strategy game: four tigers against twenty goats.</p>
+      <h4 data-icon="tiger">Tigers</h4>
+      <ul>
+        <li>Select a tiger to see where it can go (green).</li>
+        <li>Move to a connected empty point, or jump over a goat to capture it (red).</li>
+      </ul>
+      <h4 data-icon="goat">Goats</h4>
+      <ul>
+        <li>Goats go first and are placed one at a time.</li>
+        <li>After all <span data-rule="goatsTotal"></span> are placed, goats move to connected empty points.</li>
+        <li>Goats cannot capture.</li>
+      </ul>
+      <h4>How to win</h4>
+      <ul>
+        <li>Tigers: capture <span data-rule="capturesToWin"></span> goats.</li>
+        <li>Goats: trap every tiger so none can move.</li>
+        <li>Draw: the same position happens <span data-rule="repeatsForDraw"></span> times.</li>
+      </ul>
+    </div>
+  </details>
 
 </div>
 
@@ -111,34 +138,29 @@
     <button id="startBack" class="secondary">Back to game</button>
   </div>
 
-  <details class="how-to" id="howtoBtn">
-    <summary>How to play</summary>
-  </details>
+  <div class="how-to" id="creditsBtn">
+    <summary>Credits</summary>
+  </div>
+  
 </dialog>
 
 <!-- RULES -->
 <dialog id="rulesDlg" aria-labelledby="rulesTitle">
   <h2 id="rulesTitle">How to play</h2>
-  <p>A traditional Nepali strategy game: four tigers against twenty goats.</p>
-  <h4 data-icon="tiger">Tigers</h4>
-  <ul>
-    <li>Select a tiger to see where it can go (green).</li>
-    <li>Move to a connected empty point, or jump over a goat to capture it (red).</li>
-  </ul>
-  <h4 data-icon="goat">Goats</h4>
-  <ul>
-    <li>Goats go first and are placed one at a time.</li>
-    <li>After all <span data-rule="goatsTotal"></span> are placed, goats move to connected empty points.</li>
-    <li>Goats cannot capture.</li>
-  </ul>
-  <h4>How to win</h4>
-  <ul>
-    <li>Tigers: capture <span data-rule="capturesToWin"></span> goats.</li>
-    <li>Goats: trap every tiger so none can move.</li>
-    <li>Draw: the same position happens <span data-rule="repeatsForDraw"></span> times.</li>
-  </ul>
+  <div id="rulesCopy"></div>   <!-- filled from the "How to play" panel by js/ui.js, so the rules text lives in one place -->
   <div class="btn-row"><button id="rulesClose">Got it</button></div>
 </dialog>
+
+<dialog class="panel" id="creditsDlg">
+    <summary id="creditsSummary">Credits:</summary>
+    <div class="rules-body">
+      <p></p>
+      <h4 data-icon="tiger">Tigers</h4>
+      
+      <h4 data-icon="goat">Goats</h4>
+      <div class="btn-row"><button id="creditsClose">Ok</button></div>
+    </div>
+  </dialog>
 
 <!-- GAME OVER -->
 <div id="overlay">
@@ -148,9 +170,7 @@
     <div class="btn-row">
       <button id="overNew">Play again</button>
       <button id="overClose" class="secondary">View board</button>
-    </div>
-    <div class="btn=row">
-      <button id="overSettings" class="secondary">Change settings</button>
+      <button id="overSettings" class="secondary wide">⚙ Change settings</button>
     </div>
   </div>
 </div>

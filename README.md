@@ -9,9 +9,11 @@ Open index.html in a browser.
 ## Screens
 
 The game opens on a **start screen** (every time) where you pick the mode (vs Computer, 2 players, Online), the side you play
-and the computer's level. Your last choices are already selected, so it's one tap on **Play**. While playing, the screen only shows
-a one-line summary, the board, the counters and the New game / Undo buttons; the **⚙** button reopens the start screen and **?** shows the rules.
-On phones the whole game fits on one screen. The browser's Back button also returns to the start screen.
+and the computer's level. Your last choices are already selected, so it's one tap on **Play**. While playing, the screen shows a one-line summary, the board, the counters and the New game / Undo buttons.
+On wide screens there are three panels: **How to play** on the left, the board in the middle, and the summary + counters + buttons
+(including **Settings**, which reopens the start screen) on the right. On phones the summary is a bar above the board (with **?** for the
+rules and **⚙** for settings), the whole game fits on one screen, and the **How to play** panel uses whatever space is left under it.
+The browser's Back button also returns to the start screen.
 
 ## Online play (no server needed)
 
@@ -30,10 +32,10 @@ left over from the earlier socket.io server attempt and are not used.
 
 Tests: none are included in the repo yet.
 
-![ls -la](img/Desktop.png)
+![ls -la](img/three-panel-desktop.png)
 
-![ls -la](img/res-win-popup.png)
+![ls -la](img/start-screen.png)
 
-![ls -la](img/res-draw-banner.png)
+![ls -la](img/three-panel-phones.png)
 
-![ls -la](img/res-lose-banner.png)
+![ls -la](img/three-panel-tablet.png)
