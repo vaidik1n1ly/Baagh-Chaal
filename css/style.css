@@ -8,30 +8,44 @@ body { margin: 0; padding: 12px; min-height: 100vh; font-family: var(--font); co
 h1 { display: none; text-align: center; margin: 2px 0 12px; font-size: clamp(22px, 5.5vw, 34px); letter-spacing: .5px; }   /* hidden on phones: the start screen already shows the title */
 
 /* ================= LAYOUT =================
-   Phones:    info bar, turn bar, board, then counters + buttons: the whole game on one screen.
-   Bigger:    board on the left, counters + buttons on the right.            */
-.layout { display: grid; gap: 12px; max-width: 1280px; margin: 0 auto; align-items: start;
-          grid-template-columns: minmax(0, 1fr); grid-template-areas: "stage" "side" ; }
+   Phones:   info bar, turn bar, board, counters + buttons, and "How to play" in whatever space is left.
+   Tablets:  board | info + counters, "How to play" underneath.
+   Wide:     "How to play" | board (centered) | info + counters.                          */
+.layout { display: grid; gap: 8px; max-width: 1280px; margin: 0 auto; align-items: start;
+          grid-template-columns: minmax(0, 1fr); grid-template-areas: "info" "stage" "side" "about"; }
+#info  { grid-area: info; }
 .stage { grid-area: stage; justify-self: center; width: min(100%, var(--board-max), max(280px, calc(100vh - var(--chrome))));
          width: min(100%, var(--board-max), max(260px, calc(100dvh - var(--chrome)))); }
 #side  { grid-area: side; }
+#about { grid-area: about; }
 
 @media (min-width: 760px) {
-  :root { --chrome: 235px;
+  :root { --chrome: 185px;
           --stage-w: min(var(--board-max), calc(100vw - 352px), max(260px, calc(100vh - var(--chrome)))); }   /* width of the board column */
   @supports (height: 100dvh) { :root { --stage-w: min(var(--board-max), calc(100vw - 352px), max(260px, calc(100dvh - var(--chrome)))); } }
   h1 { display: block; }
-  .layout { gap: 16px; grid-template-columns: var(--stage-w) 300px; grid-template-areas: "stage side"; justify-content: center; }   /* board and counters sit together, centered */
+  .layout { gap: 16px; grid-template-columns: var(--stage-w) 300px; grid-template-rows: auto auto 1fr auto; justify-content: center;
+            grid-template-areas: "stage info" "stage side" "stage ." "about about"; }
   .stage { width: 100%; }
 }
+@media (min-width: 1180px) {
+  :root { --stage-w: min(var(--board-max), calc(100vw - 672px), max(260px, calc(100vh - var(--chrome)))); }
+  @supports (height: 100dvh) { :root { --stage-w: min(var(--board-max), calc(100vw - 672px), max(260px, calc(100dvh - var(--chrome)))); } }
+  .layout { grid-template-columns: 300px var(--stage-w) 300px; grid-template-rows: auto auto 1fr;
+            grid-template-areas: "about stage info" "about stage side" "about stage ."; }
+}
 
-/* ================= INFO BAR (above the board) ================= */
-.infobar { display:flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 8px; }
-#summary { min-width: 0; font-size: 14px; font-weight: 700; line-height: 1.25; }   /* may wrap to two lines on narrow phones; the bar is tall enough */
+/* ================= INFO BAR ================= */
+.infobar { display: flex; align-items: center; justify-content: space-between; gap: 8px; }      /* phones: a bar above the board */
+#summary { min-width: 0; font-size: 14px; font-weight: 700; line-height: 1.25; white-space: pre-line; }   /* the line break in the text is kept */   /* may wrap to two lines on narrow phones; the bar is tall enough */
 .tools { display: flex; gap: 6px; flex: none; }
 .tool { flex: none; min-width: 44px; padding: 8px 12px; }
-.tool .lbl { display: none; }
-@media (min-width: 760px) { .tool .lbl { display: inline; } }
+.tool .lbl { display: none; }                  /* icon-only buttons (the word is for screen readers via aria-label) */
+@media (min-width: 760px) {                     /* bigger screens: a card above the counters; Settings lives under New game / Undo */
+  .infobar { background: var(--panel-bg); border: 2px solid var(--panel-border); border-radius: var(--radius); padding: 12px 14px; box-shadow: 0 6px 18px rgba(60, 25, 5, .18); }
+  #summary { font-size: 14px; }
+  .tools { display: none; }
+}
 
 /* ================= PANELS ================= */
 .panel { background: var(--panel-bg); border: 2px solid var(--panel-border); border-radius: var(--radius);
@@ -44,6 +58,18 @@ h1 { display: none; text-align: center; margin: 2px 0 12px; font-size: clamp(22p
   .stat b { font-size: 17px; }
   .stat small { font-size: 10px; line-height: 1.15; letter-spacing: .02em; display: block; }
 }
+
+/* ================= HOW TO PLAY PANEL ================= */
+#about { padding: 14px 16px; overflow-y: auto; }
+#about summary { position: sticky; top: 0; background: var(--panel-bg); font-weight: 700; font-size: 18px; cursor: pointer; }
+#about[open] summary { margin-bottom: 6px; }
+.rules-body h4 { margin: 12px 0 4px; font-size: 15px; }
+.rules-body p, .rules-body ul { margin: 4px 0; font-size: 14px; line-height: 1.5; }
+.rules-body ul { padding-left: 20px; }
+@media (max-width: 759px) { #about { padding: 10px 14px; } .rules-body p, .rules-body ul { font-size: 13px; line-height: 1.4; } }
+
+.btn-row .wide { grid-column: 1 / -1; }
+@media (max-width: 759px) { #settingsBtnSide { display: none; } }    /* phones have the gear button in the info bar */
 
 /* ---- online play box ---- */
 .online { margin: 12px 0 0; padding: 12px; background: rgba(255, 255, 255, .4); border-radius: 12px; }

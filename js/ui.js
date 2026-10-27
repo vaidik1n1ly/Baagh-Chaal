@@ -76,7 +76,7 @@ let animate = null;      // the move to animate on the NEXT render (set right af
 let popupTimer = null;
 let online = { role: null, connected: false, mySide: null, code: null, msg: "", note: "" };   // see "online play" below
 
-const startDlg = $("startScreen"), rulesDlg = $("rulesDlg");
+const startDlg = $("startScreen"), rulesDlg = $("rulesDlg"), creditsDlg = $("creditsDlg");
 const nav = window.history;            // (the undo list is called `history`, so the browser's history gets another name here)
 const SETTINGS_KEY = "baagh-chaal-settings";
 const DEFAULT_SETTINGS = { mode: "cpu", side: "goat", level: "2" };
@@ -355,8 +355,8 @@ function commitDraft(remember = true) {          // make the start screen's choi
 
 function summaryText() {                        // the one line shown above the board while playing
   const me = side => `${icon(side)} ${WORDS.sideName[side]}`;
-  if (vsComputer()) return `You: ${me($("mySide").value)} · vs Computer · ${WORDS.levels[$("level").value]}`;
-  if (isOnline())   return online.connected && online.mySide ? `Online · You: ${me(online.mySide)}` : "Online";
+  if (vsComputer()) return `You: ${me($("mySide").value)}\nvs Computer · ${WORDS.levels[$("level").value]}`;      // two lines on purpose (see #summary in style.css)
+  if (isOnline())   return online.connected && online.mySide ? `You: ${me(online.mySide)}\nOnline game` : "Online";
   return "2 players";
 }
 
@@ -420,7 +420,25 @@ function onCancelOnline() { Net.close(); online = freshOnline(); renderStart(); 
 let toastTimer = null;
 function toast(text) { const t = $("toast"); t.textContent = text; t.hidden = false; clearTimeout(toastTimer); toastTimer = setTimeout(() => { t.hidden = true; }, 3500); }
 
+// ---- "How to play" panel: always open on wide screens; on phones and tablets it uses the empty space under the game ----
+let aboutTouched = false;       // once you open/close it yourself, we stop deciding for you
+let aboutTimer = null;
+function fitAbout() {
+  const d = $("about"), phone = window.matchMedia("(max-width: 759px)").matches;
+  d.style.maxHeight = ""; d.hidden = false;
+  if (window.matchMedia("(min-width: 1180px)").matches) { if (!aboutTouched) d.open = true; return; }     // wide: a side panel, always open
+  if (!aboutTouched) d.open = true;                                       // try it open, then see how much room there is
+  if (!d.open) return;
+  const room = window.innerHeight - d.getBoundingClientRect().top - 12;   // empty space between the panel's top edge and the bottom of the screen
+  if (room < 150 && !aboutTouched) { if (phone) d.hidden = true; else d.open = false; return; }   // too little room: on a short phone skip it (the ? button shows the rules); on a tablet leave a bar
+  if (room >= 150 && d.scrollHeight > room) d.style.maxHeight = room + "px";   // not enough for all of it: scroll inside the panel, not the page
+}
+$("aboutSummary").addEventListener("click", () => { aboutTouched = true; setTimeout(fitAbout, 0); });
+window.addEventListener("resize", () => { clearTimeout(aboutTimer); aboutTimer = setTimeout(fitAbout, 150); });
+window.addEventListener("load", fitAbout);
+
 // ---- start-up ----
+$("rulesCopy").innerHTML = document.querySelector("#about .rules-body").innerHTML;   // the rules dialog shows the same text as the panel
 document.querySelectorAll("[data-icon]").forEach(el => el.textContent = `${icon(el.dataset.icon)} ${el.textContent}`.trim());
 document.querySelectorAll("[data-rule]").forEach(el => el.textContent = Rules.config[el.dataset.rule]);
 
@@ -436,9 +454,11 @@ $("overNew").onclick = onNewGameClick;
 $("overSettings").onclick = () => { popupClosed = true; render(); openStart(); };
 $("overClose").onclick = () => { popupClosed = true; render(); };
 $("settingsBtn").onclick = openStart;
+$("settingsBtnSide").onclick = openStart;
 $("rulesBtn").onclick = () => showDialog(rulesDlg);
 $("rulesClose").onclick = () => hideDialog(rulesDlg);
-$("howtoBtn").onclick = () => showDialog(rulesDlg);
+$("creditsBtn").onclick = () => showDialog(creditsDlg);
+$("creditsClose").onclick = () => hideDialog(creditsDlg);
 
 document.querySelectorAll(".seg button").forEach(b => b.onclick = () => { draft[b.parentElement.dataset.key] = b.dataset.value; renderStart(); });
 $("playBtn").onclick = onPlayClick;
@@ -459,3 +479,5 @@ showDialog(startDlg); renderStart();
 // An invite link (…/index.html?room=ABCDE) goes straight to joining that game (and doesn't change your remembered choices).
 const roomFromLink = new URLSearchParams(location.search).get("room");
 if (roomFromLink) { draft.mode = "online"; $("joinCode").value = roomFromLink.toUpperCase(); joinFromStart(false); }
+
+requestAnimationFrame(fitAbout);
