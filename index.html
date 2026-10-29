@@ -6,6 +6,10 @@
   <title>Baagh-Chaal</title>
   <link rel="stylesheet" href="css/theme.css">   <!-- colours, icons, sizes -->
   <link rel="stylesheet" href="css/style.css">   <!-- layout -->
+
+  <!-- fontawesome icons -->
+  <link rel="stylesheet" href="css/vendor/fontawesome/css/all.css" type="text/css">
+
 </head>
 <body>
 
@@ -47,9 +51,9 @@
     <label class="check" style="display: none;"><input type="checkbox" id="animToggle"> Animations</label>
 
     <div class="btn-row">
-      <button id="new">New game</button>
-      <button id="undo" class="secondary">↩ Undo</button>
-      <button id="settingsBtnSide" class="secondary wide">⚙ Settings</button>
+      <button id="new"><i class="fa-solid fa-arrows-rotate"></i> Restart</button>
+      <button id="undo" class="secondary"><i class="fa-solid fa-angles-left"></i> Undo</button>
+      <button id="settingsBtnSide" class="secondary wide"><i class="fa-solid fa-sliders"></i> Settings</button>
     </div>
 
   </section>
@@ -61,8 +65,8 @@
       <p>A traditional Nepali strategy game: four tigers against twenty goats.</p>
       <h4 data-icon="tiger">Tigers</h4>
       <ul>
-        <li>Select a tiger to see where it can go (green).</li>
-        <li>Move to a connected empty point, or jump over a goat to capture it (red).</li>
+        <li>Select a tiger to see where it can go.</li>
+        <li>Move to a connected empty point, or jump over a goat to capture it.</li>
       </ul>
       <h4 data-icon="goat">Goats</h4>
       <ul>
@@ -70,7 +74,7 @@
         <li>After all <span data-rule="goatsTotal"></span> are placed, goats move to connected empty points.</li>
         <li>Goats cannot capture.</li>
       </ul>
-      <h4>How to win</h4>
+      <h4>How to win <i class="fa-solid fa-trophy"></i></h4>
       <ul>
         <li>Tigers: capture <span data-rule="capturesToWin"></span> goats.</li>
         <li>Goats: trap every tiger so none can move.</li>
@@ -89,9 +93,9 @@
   <div class="field">
     <span class="field-label" id="lblMode">Mode</span>
     <div class="seg" role="radiogroup" aria-labelledby="lblMode" data-key="mode">
-      <button type="button" role="radio" data-value="cpu">vs Computer</button>
-      <button type="button" role="radio" data-value="2p">2 players</button>
-      <button type="button" role="radio" data-value="online">Online</button>
+      <button type="button" role="radio" data-value="cpu"><i class="fa-sharp fa-solid fa-desktop"></i><br>vs PC</button>
+      <button type="button" role="radio" data-value="2p"><i class="fa-sharp fa-solid fa-user-friends"></i><br>2 players</button>
+      <button type="button" role="radio" data-value="online"><i style="color: rgb(11, 223, 11);" class="fa-sharp fa-solid fa-circle"></i><br>Online</button>
     </div>
   </div>
 
@@ -134,12 +138,12 @@
   </div>
 
   <div class="start-actions">
-    <button id="playBtn">Play</button>
+    <button id="playBtn"><i class="fa-sharp fa-solid fa-play"></i> New Game</button>
     <button id="startBack" class="secondary">Back to game</button>
   </div>
 
   <div class="how-to" id="creditsBtn">
-    <summary>Credits</summary>
+    <summary style="color: tomato;"><i class="fa-solid fa-heart"></i></summary>
   </div>
   
 </dialog>
@@ -152,12 +156,10 @@
 </dialog>
 
 <dialog class="panel" id="creditsDlg">
-    <summary id="creditsSummary">Credits:</summary>
+    <summary id="creditsSummary" style="color: tomato;"><i class="fa-solid fa-heart"></i></summary>
     <div class="rules-body">
-      <p></p>
-      <h4 data-icon="tiger">Tigers</h4>
-      
-      <h4 data-icon="goat">Goats</h4>
+      <p><a href="https://github.com/vaidik1n1ly" target="_blank"><i class="fa-brands fa-github"></i> vaidik1n1ly</a></p>
+      <p><a href="https://github.com/DamsCode444" target="_blank"><i class="fa-brands fa-github"></i> DamsCode444</a></p>
       <div class="btn-row"><button id="creditsClose">Ok</button></div>
     </div>
   </dialog>
@@ -168,9 +170,9 @@
     <h2 id="overTitle"></h2>
     <p id="overMsg"></p>
     <div class="btn-row">
-      <button id="overNew">Play again</button>
-      <button id="overClose" class="secondary">View board</button>
-      <button id="overSettings" class="secondary wide">⚙ Change settings</button>
+      <button id="overNew">New Game</button>
+      <button id="overClose" class="secondary">View Board</button>
+      <button id="overSettings" class="secondary wide"><i class="fa-solid fa-sliders"></i> Change settings</button>
     </div>
   </div>
 </div>
