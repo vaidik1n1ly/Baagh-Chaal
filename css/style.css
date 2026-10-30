@@ -4,8 +4,10 @@
 :root { --chrome: 320px; }   /* phones: space taken by everything except the board (info bar + turn bar above it, counters + buttons below it), so the whole game fits the screen */
 
 body { margin: 0; padding: 12px; min-height: 100vh; font-family: var(--font); color: var(--text-color); line-height: 1.4;
-       background: var(--page-bg) radial-gradient(circle at 50% 0%, var(--page-bg-light), var(--page-bg) 70%) no-repeat; }
-h1 { display: none; text-align: center; margin: 2px 0 12px; font-size: clamp(22px, 5.5vw, 34px); letter-spacing: .5px; }   /* hidden on phones: the start screen already shows the title */
+       background-image: url("../img/86424.jpg");}
+/* body { margin: 0; padding: 12px; min-height: 100vh; font-family: var(--font); color: var(--text-color); line-height: 1.4;
+       background: var(--page-bg) radial-gradient(circle at 50% 0%, var(--page-bg-light), var(--page-bg) 70%) no-repeat; } */
+h1 { display: none; color: beige; text-align: center; margin: 2px 0 12px; font-size: clamp(22px, 5.5vw, 34px); letter-spacing: .5px;}   /* hidden on phones: the start screen already shows the title */
 
 /* ================= LAYOUT =================
    Phones:   info bar, turn bar, board, counters + buttons, and "How to play" in whatever space is left.
