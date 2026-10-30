@@ -17,8 +17,8 @@
      To go back to emoji on the board: delete these 4 lines. */
   --tiger-piece-icon: "";
   --goat-piece-icon:  "";
-  --tiger-image: url("../img/tiger.png");
-  --goat-image:  url("../img/goat.png");
+  --tiger-image: url("../img/scary.png");
+  --goat-image:  url("../img/witch.png");
 
   /* ---------- PAGE & PANELS ---------- */
   --page-bg:       #0ac486;
