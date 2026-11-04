@@ -17,10 +17,13 @@
      To go back to emoji on the board: delete these 4 lines. */
   --tiger-piece-icon: "";
   --goat-piece-icon:  "";
-  --tiger-image: url("../img/scary.png");
-  --goat-image:  url("../img/witch.png");
+  --tiger-image: url("../img/turkey.png");
+  --goat-image:  url("../img/pilgrim-hat.png");
 
   /* ---------- PAGE & PANELS ---------- */
+
+  --background-img: url("../img/7951249.jpg");
+
   --page-bg:       #0ac486;
   /* --page-bg:       #FF7518; */
   /* --page-bg:       #c98a35; */
@@ -41,15 +44,20 @@
   /* --board-bg:      #C41E3A; */
   --board-bg:      #e8c88f;
   --board-bg-light:#f2dba9;
-  --board-frame:   #5b2a10;      /* the thick wooden frame */
+  /* the thick wooden frame */
+  /* --board-frame:   #5b2a10;  */    
+  --board-frame:   #f8874a;
+  /* --line-color:    #6a2f12; */
   --line-color:    #6a2f12;
   --point-color:   #5b2a10;      /* empty points */
   --point-ring:    #e8c88f;
 
   /* ---------- PIECES ---------- */
   --tiger-bg:      #2b1608;      /* dark disc so the tiger stands out */
+  /* --tiger-bg:      black; */
   --tiger-ring:    #ff8a00;
-  --goat-bg:       #fff6e0;
+  /* --goat-bg:       #fff6e0; */
+  --goat-bg:       #fda06e;
   --goat-ring:     #8a5a2b;
   --selected-ring: #2f9bff;      /* the piece you picked */
 
